@@ -11,7 +11,7 @@
 
 import type { Implementation } from './types.ts';
 
-const VOYAGE_OUTPUT_DIMENSION_MODELS = new Set([
+const OUTPUT_DIMENSION_MODELS = new Set([
   'voyage-4-large',
   'voyage-4',
   'voyage-4-lite',
@@ -19,6 +19,7 @@ const VOYAGE_OUTPUT_DIMENSION_MODELS = new Set([
   'voyage-3.5',
   'voyage-3.5-lite',
   'voyage-code-3',
+  'text-embedding-v4', // DashScope (Alibaba Cloud) supports dimensions via openai-compatible API
 ]);
 
 /**
@@ -52,11 +53,12 @@ export function dimsProviderOptions(
       // Anthropic has no embedding model.
       return undefined;
     case 'openai-compatible':
-      // Most openai-compatible providers (Ollama, LM Studio, vLLM, LiteLLM)
-      // do not expose a standard dimensions knob. Voyage's compat endpoint is
-      // the exception: it accepts output_dimension and defaults to 1024 dims.
-      if (VOYAGE_OUTPUT_DIMENSION_MODELS.has(modelId)) {
-        return { openaiCompatible: { output_dimension: dims } };
+      // Most openai-compatible providers that support dimension control
+      // accept the standard OpenAI `dimensions` parameter. DashScope's
+      // text-embedding-v4 uses this. Voyage's compat endpoint also accepts
+      // `dimensions` (the standard name).
+      if (OUTPUT_DIMENSION_MODELS.has(modelId)) {
+        return { openaiCompatible: { dimensions: dims } };
       }
       return undefined;
   }

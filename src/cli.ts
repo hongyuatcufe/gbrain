@@ -1169,7 +1169,15 @@ function buildGatewayConfig(c: GBrainConfig): AIGatewayConfig {
     chat_model: c.chat_model,
     chat_fallback_chain: c.chat_fallback_chain,
     base_urls: c.provider_base_urls,
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      // Config-file keys overlay process.env so the gateway can find them even
+      // when the shell doesn't export the vars (e.g. Claude Code tool calls).
+      ...(c.openai_api_key ? { OPENAI_API_KEY: c.openai_api_key } : {}),
+      ...(c.anthropic_api_key ? { ANTHROPIC_API_KEY: c.anthropic_api_key } : {}),
+      ...(c.deepseek_api_key ? { DEEPSEEK_API_KEY: c.deepseek_api_key } : {}),
+      ...(c.dashscope_api_key ? { DASHSCOPE_API_KEY: c.dashscope_api_key } : {}),
+    },
   };
 }
 

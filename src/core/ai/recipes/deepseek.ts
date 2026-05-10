@@ -33,9 +33,7 @@ export const deepseek: Recipe = {
     },
     expansion: {
       models: ['deepseek-v4-flash'],
-      max_context_tokens: 1_000_000,
-      cost_per_1m_input_usd: 0.07,
-      cost_per_1m_output_usd: 0.14,
+      cost_per_1m_tokens_usd: 0.07,
       price_last_verified: '2026-05-10',
     },
   },

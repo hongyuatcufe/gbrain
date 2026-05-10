@@ -57,16 +57,10 @@ interface StubCall {
 function makeStubClient(cannedText: string): { client: ThinkLLMClient; calls: StubCall[] } {
   const calls: StubCall[] = [];
   const client: ThinkLLMClient = {
-    async create(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> {
-      const sys = typeof params.system === 'string'
-        ? params.system
-        : Array.isArray(params.system)
-          ? params.system.map(b => (typeof b === 'string' ? b : (b as any).text ?? '')).join('\n')
-          : '';
+    async create(params: { model: string; max_tokens: number; system: string; messages: { role: string; content: string }[] }): Promise<{ content: { type: string; text?: string }[] }> {
+      const sys = typeof params.system === 'string' ? params.system : '';
       const userMsg = params.messages[0];
-      const userContent = typeof userMsg.content === 'string'
-        ? userMsg.content
-        : userMsg.content.map(b => (b.type === 'text' ? b.text : '')).join('\n');
+      const userContent = typeof userMsg.content === 'string' ? userMsg.content : '';
       calls.push({ model: params.model, system: sys, userText: userContent });
       return {
         id: 'stub-msg-id',

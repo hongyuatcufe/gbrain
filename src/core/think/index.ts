@@ -17,17 +17,17 @@
  * for those flags per Codex P1 #7.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import type { BrainEngine, SynthesisEvidenceInput } from '../engine.ts';
 import { runGather, renderPagesBlock, takesHitToTakeForPrompt } from './gather.ts';
 import { renderTakesBlock } from './sanitize.ts';
 import { buildThinkSystemPrompt, buildThinkUserMessage } from './prompt.ts';
 import { resolveCitations, type ParsedCitation } from './cite-render.ts';
 import { resolveModel } from '../model-config.ts';
+import { chat, isAvailable } from '../ai/gateway.ts';
 
-/** Anthropic Messages client interface — same shape used by subagent.ts so test stubs can be shared. */
+/** Stub interface for tests — provider-neutral shape. */
 export interface ThinkLLMClient {
-  create(params: Anthropic.MessageCreateParamsNonStreaming, opts?: { signal?: AbortSignal }): Promise<Anthropic.Message>;
+  create(params: { model: string; max_tokens: number; system: string; messages: { role: string; content: string }[] }, opts?: { signal?: AbortSignal }): Promise<{ content: { type: string; text?: string }[] }>;
 }
 
 export interface RunThinkOpts {
@@ -221,14 +221,14 @@ export async function runThink(
   if (opts.stubResponse) {
     response = opts.stubResponse;
   } else {
-    if (!opts.client && !process.env.ANTHROPIC_API_KEY) {
-      warnings.push('NO_ANTHROPIC_API_KEY');
-      // Degrade gracefully: return the gather without synthesis. Better than throwing.
+    if (!opts.client && !isAvailable('chat')) {
+      warnings.push('NO_CHAT_MODEL');
+      // Degrade gracefully: return the gather without synthesis.
       return {
         question: opts.question,
-        answer: '(no LLM available — set ANTHROPIC_API_KEY or pass `client`)',
+        answer: '(no chat model available — configure chat_model or GBRAIN_CHAT_MODEL)',
         citations: [],
-        gaps: ['no LLM available; gather succeeded but synthesis skipped'],
+        gaps: ['no chat model available; gather succeeded but synthesis skipped'],
         pagesGathered: gather.pages.length,
         takesGathered: gather.takes.length,
         graphHits: gather.graphSlugs.length,
@@ -243,19 +243,28 @@ export async function runThink(
         },
       };
     }
-    // Anthropic SDK exposes the create method via .messages — match the structural signature.
-    const realClient = new Anthropic();
-    const client: ThinkLLMClient = opts.client ?? {
-      create: (params, opts2) => realClient.messages.create(params, opts2),
-    };
-    const result = await client.create({
-      model: modelUsed,
-      max_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    });
-    const block = result.content.find(b => b.type === 'text');
-    const text = block && 'text' in block ? block.text : '';
+    let text: string;
+    if (opts.client) {
+      // Test stub path — keeps backward compat with injected clients.
+      const result = await opts.client.create({
+        model: modelUsed,
+        max_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      });
+      const block = result.content.find(b => b.type === 'text');
+      text = block && 'text' in block ? (block.text ?? '') : '';
+    } else {
+      // Production path — provider-neutral gateway chat().
+      const result = await chat({
+        model: modelUsed,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: [{ type: 'text', text: userMessage }] }],
+        maxTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+      });
+      const block = result.blocks.find(b => b.type === 'text');
+      text = block && 'text' in block ? (block.text ?? '') : '';
+    }
     const parsed = tryParseJSON(text);
     if (!parsed || typeof parsed !== 'object') {
       warnings.push('LLM_OUTPUT_NOT_JSON');

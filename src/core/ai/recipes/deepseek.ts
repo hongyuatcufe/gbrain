@@ -22,7 +22,7 @@ export const deepseek: Recipe = {
   },
   touchpoints: {
     chat: {
-      models: ['deepseek-v4-pro', 'deepseek-v4-flash'],
+      models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
       supports_tools: true,
       supports_subagent_loop: true,
       supports_prompt_cache: false,

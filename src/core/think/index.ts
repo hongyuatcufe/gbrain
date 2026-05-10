@@ -261,6 +261,7 @@ export async function runThink(
         system: systemPrompt,
         messages: [{ role: 'user', content: [{ type: 'text', text: userMessage }] }],
         maxTokens: DEFAULT_MAX_OUTPUT_TOKENS,
+        responseFormat: { type: 'json_object' },
       });
       const block = result.blocks.find(b => b.type === 'text');
       text = block && 'text' in block ? (block.text ?? '') : '';

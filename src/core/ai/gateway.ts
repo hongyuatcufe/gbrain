@@ -21,7 +21,7 @@
  *     rotation (via configureGateway()) invalidates stale entries.
  */
 
-import { embed as aiEmbed, embedMany, generateObject, generateText } from 'ai';
+import { embed as aiEmbed, embedMany, generateObject, generateText, Output } from 'ai';
 import { listRecipes } from './recipes/index.ts';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -999,6 +999,14 @@ export interface ChatOpts {
    * ignored on providers without `supports_prompt_cache`.
    */
   cacheSystem?: boolean;
+  /**
+   * Request structured JSON output from the model.
+   * - 'json_object': forces the model to return a valid JSON object.
+   *   Passed as response_format via providerOptions for openai-compatible
+   *   providers (DeepSeek, OpenAI, etc.). Ignored on providers that don't
+   *   support it (Anthropic).
+   */
+  responseFormat?: { type: 'json_object' | 'text' };
 }
 
 async function resolveChatProvider(modelStr: string): Promise<{ model: any; recipe: Recipe; modelId: string }> {
@@ -1102,6 +1110,13 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
     providerOptions.anthropic = { cacheControl: { type: 'ephemeral' } };
   }
 
+  // Use AI SDK Output.json() for openai-compatible providers that support JSON mode
+  // (e.g. DeepSeek v4). This sends response_format: { type: "json_object" } so the
+  // model is guaranteed to return parseable JSON instead of markdown-wrapped JSON.
+  const useJsonOutput =
+    opts.responseFormat?.type === 'json_object' &&
+    recipe.implementation === 'openai-compatible';
+
   try {
     const result = await generateText({
       model,
@@ -1110,6 +1125,7 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
       tools: opts.tools && opts.tools.length > 0 ? tools : undefined,
       maxOutputTokens: opts.maxTokens ?? 4096,
       abortSignal: opts.abortSignal,
+      output: useJsonOutput ? Output.json() : undefined,
       providerOptions: Object.keys(providerOptions).length > 0 ? providerOptions : undefined,
     });
 

@@ -229,6 +229,8 @@ export async function loadConfigWithEngine(
   const dbMultimodalModel = await dbStr('embedding_multimodal_model');
   const dbOcr = await dbBool('embedding_image_ocr');
   const dbOcrModel = await dbStr('embedding_image_ocr_model');
+  const dbChatModel = await dbStr('chat_model');
+  const dbExpansionModel = await dbStr('expansion_model');
 
   // DB applies only when env did NOT win. Env presence is detected by the
   // sync loadConfig() already setting the field. For each flag, prefer the
@@ -245,6 +247,12 @@ export async function loadConfigWithEngine(
   }
   if (merged.embedding_image_ocr_model === undefined && dbOcrModel !== undefined) {
     merged.embedding_image_ocr_model = dbOcrModel;
+  }
+  if (merged.chat_model === undefined && dbChatModel !== undefined) {
+    merged.chat_model = dbChatModel;
+  }
+  if (merged.expansion_model === undefined && dbExpansionModel !== undefined) {
+    merged.expansion_model = dbExpansionModel;
   }
   return merged;
 }

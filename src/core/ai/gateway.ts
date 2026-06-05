@@ -21,7 +21,7 @@
  *     rotation (via configureGateway()) invalidates stale entries.
  */
 
-import { embed as aiEmbed, embedMany, generateObject, generateText, jsonSchema } from 'ai';
+import { embed as aiEmbed, embedMany, generateObject, generateText, jsonSchema, Output } from 'ai';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { listRecipes } from './recipes/index.ts';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -2310,6 +2310,12 @@ export interface ChatOpts {
    * ignored on providers without `supports_prompt_cache`.
    */
   cacheSystem?: boolean;
+  /**
+   * Request structured JSON output from the model.
+   * - 'json_object': forces the model to return valid JSON via providerOptions
+   *   for openai-compatible providers (DeepSeek, OpenAI, etc.).
+   */
+  responseFormat?: { type: 'json_object' | 'text' };
 }
 
 /**
@@ -2666,6 +2672,10 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
       // v0.42.20.0 — default a chat timeout (composes with the caller's signal,
       // shorter wins). Covers native-anthropic (the default provider + facts Haiku).
       abortSignal: withDefaultTimeout(opts.abortSignal, AI_CHAT_TIMEOUT_MS),
+      // hongyuatcufe custom: responseFormat for JSON mode on openai-compatible providers
+      output: opts.responseFormat?.type === 'json_object' && recipe.implementation === 'openai-compatible'
+        ? Output.json()
+        : undefined,
       providerOptions: Object.keys(providerOptions).length > 0 ? providerOptions : undefined,
     });
 

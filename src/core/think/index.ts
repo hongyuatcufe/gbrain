@@ -439,13 +439,13 @@ export async function runThink(
     // Closes #952 (think over MCP returns "no LLM available").
     const client = opts.client ?? await tryBuildGatewayClient(modelUsed, { explicitModel: opts.modelExplicit });
     if (!client) {
-      warnings.push('NO_ANTHROPIC_API_KEY');
+      warnings.push('NO_CHAT_MODEL');
       // Degrade gracefully: return the gather without synthesis. Better than throwing.
       return {
         question: opts.question,
-        answer: '(no LLM available — set ANTHROPIC_API_KEY or pass `client`)',
+        answer: '(no chat model available — configure chat_model or GBRAIN_CHAT_MODEL)',
         citations: [],
-        gaps: ['no LLM available; gather succeeded but synthesis skipped'],
+        gaps: ['no chat model available; gather succeeded but synthesis skipped'],
         pagesGathered: gather.pages.length,
         takesGathered: gather.takes.length,
         graphHits: gather.graphSlugs.length,

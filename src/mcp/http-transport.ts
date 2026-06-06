@@ -66,6 +66,14 @@ interface AuthResult {
   tokenName?: string;
   /** v0.28: per-token allow-list for takes.holder. Default ['world'] when permissions row absent. */
   takesHoldersAllowList?: string[];
+  /**
+   * v0.34.1 (#861, D13): source-isolation scope for the auth'd request.
+   * Legacy bearer tokens here default to 'default' to match the v0.33
+   * effective behavior (the now-removed serve-http.ts fallback chain).
+   * Operators migrate to the full OAuth transport (gbrain serve --http)
+   * for narrower scoping.
+   */
+  sourceId?: string;
 }
 
 /** Read up to `cap` bytes off req.body. Returns null if cap exceeded. */
@@ -129,23 +137,37 @@ export async function startHttpTransport(opts: HttpTransportOptions) {
   const corsAllowlist = parseCorsAllowlist();
   const tools = buildToolDefs(operations);
 
-  function corsHeaders(origin: string | null, extra: Record<string, string> = {}): Record<string, string> {
-    const headers: Record<string, string> = { ...extra };
-    if (corsAllowlist && origin && corsAllowlist.has(origin)) {
-      headers['Access-Control-Allow-Origin'] = origin;
-      headers['Vary'] = 'Origin';
-    }
-    return headers;
+  /**
+   * v0.41.3 (T6): single consolidated CORS header builder. Pre-fix there were
+   * two parallel functions (`corsHeaders` for actual requests, `corsPreflightHeaders`
+   * for OPTIONS) — the preflight variant unconditionally emitted
+   * `Access-Control-Allow-Methods` + `Access-Control-Allow-Headers` to EVERY
+   * Origin, leaking the API surface to attackers probing the preflight. The
+   * actual-request path was correctly default-deny.
+   *
+   * One function, one allowlist gate. Methods/Headers only emit when
+   * preflight=true AND origin is allowlisted. Allow-Origin emits only when
+   * origin is allowlisted (unchanged). `Vary: Origin` pairs with Allow-Origin
+   * so caches don't serve allowlisted responses to non-allowlisted requests.
+   *
+   * `extra` is for response-specific headers (Retry-After, etc.) and is
+   * never gated by the allowlist.
+   */
+  interface CorsHeaderOpts {
+    preflight?: boolean;
+    extra?: Record<string, string>;
   }
-
-  function corsPreflightHeaders(origin: string | null): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
-    };
-    if (corsAllowlist && origin && corsAllowlist.has(origin)) {
+  function corsHeaders(origin: string | null, opts: CorsHeaderOpts = {}): Record<string, string> {
+    const { preflight = false, extra = {} } = opts;
+    const headers: Record<string, string> = { ...extra };
+    const allowed = corsAllowlist && origin && corsAllowlist.has(origin);
+    if (allowed) {
       headers['Access-Control-Allow-Origin'] = origin;
       headers['Vary'] = 'Origin';
+      if (preflight) {
+        headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS';
+        headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept';
+      }
     }
     return headers;
   }
@@ -180,6 +202,12 @@ export async function startHttpTransport(opts: HttpTransportOptions) {
         tokenId: rowId,
         tokenName: rowName,
         takesHoldersAllowList: allowList,
+        // v0.34.1 (#861, D13): legacy bearer tokens default to 'default'
+        // source. Preserves the pre-v0.34 effective behavior of the
+        // serve-http fallback chain that was removed for OAuth clients
+        // (migration v60 backfills oauth_clients.source_id). This path
+        // is for the older v0.22.7 access_tokens transport.
+        sourceId: 'default',
       };
     } catch {
       return { ok: false };
@@ -202,7 +230,7 @@ export async function startHttpTransport(opts: HttpTransportOptions) {
 
       // CORS preflight
       if (req.method === 'OPTIONS') {
-        return new Response(null, { headers: corsPreflightHeaders(origin) });
+        return new Response(null, { headers: corsHeaders(origin, { preflight: true }) });
       }
 
       // Health check — no auth, no rate limit. Probes the DB so orchestration
@@ -239,7 +267,7 @@ export async function startHttpTransport(opts: HttpTransportOptions) {
           { error: 'rate_limited', message: 'Too many requests' },
           {
             status: 429,
-            headers: corsHeaders(origin, { 'Retry-After': String(ipCheck.retryAfter ?? 60) }),
+            headers: corsHeaders(origin, { extra: { 'Retry-After': String(ipCheck.retryAfter ?? 60) } }),
           },
         );
       }
@@ -272,7 +300,7 @@ export async function startHttpTransport(opts: HttpTransportOptions) {
           { error: 'rate_limited', message: 'Too many requests for this token' },
           {
             status: 429,
-            headers: corsHeaders(origin, { 'Retry-After': String(tokCheck.retryAfter ?? 60) }),
+            headers: corsHeaders(origin, { extra: { 'Retry-After': String(tokCheck.retryAfter ?? 60) } }),
           },
         );
       }
@@ -328,9 +356,12 @@ export async function startHttpTransport(opts: HttpTransportOptions) {
         const args: Record<string, unknown> = params?.arguments ?? {};
         // v0.28: thread per-token takes-holder allow-list so takes_list /
         // takes_search / query (when it returns takes) can server-side filter.
+        // v0.34.1 (#861): thread source-isolation scope. Legacy access_tokens
+        // path defaults to 'default' per AuthResult.sourceId above.
         const result = await dispatchToolCall(engine, toolName, args, {
           remote: true,
           takesHoldersAllowList: auth.takesHoldersAllowList,
+          sourceId: auth.sourceId,
         });
         const status = result.isError ? 'error' : 'success';
         logRequest(auth.tokenName!, `tools/call:${toolName}`, status, Date.now() - startedMs);

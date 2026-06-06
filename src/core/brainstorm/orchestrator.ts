@@ -550,7 +550,18 @@ async function _runBrainstormInner(
   const embedFn = opts.embedQueryFn ?? embedQuery;
 
   // ---- Phase 0: cost preview + TTY grace ----
-  const modelStr = opts.modelOverride ?? 'anthropic:claude-sonnet-4-6';
+  // hongyuatcufe fork: don't hardcode anthropic — fall through to the
+  // gateway's configured chat_model (e.g. deepseek:deepseek-v4-flash for
+  // our fork) so cost preview + chat use the same model the user actually
+  // configured. opts.modelOverride still wins when explicitly passed.
+  const { getChatModel } = await import('../ai/gateway.ts');
+  let configuredChatModel: string;
+  try {
+    configuredChatModel = getChatModel();
+  } catch {
+    configuredChatModel = 'anthropic:claude-sonnet-4-6';
+  }
+  const modelStr = opts.modelOverride ?? configuredChatModel;
   const { aborted, estimate } = await previewCostAndWait({
     profile,
     model: modelStr,
@@ -758,7 +769,12 @@ async function _runBrainstormInner(
       far: cross.far,
     });
     const chatOpts: ChatOpts = {
-      model: opts.modelOverride,
+      // hongyuatcufe fork: use modelStr (which falls through to
+      // gateway.getChatModel() when no override) so the actual chat call
+      // matches what cost preview estimated. Pre-fork behavior was
+      // model: undefined → gateway re-resolves, opening a window for
+      // TIER_DEFAULTS to override the user's configured chat_model.
+      model: modelStr,
       system,
       messages: [{ role: 'user', content: user }],
       maxTokens: 1500,

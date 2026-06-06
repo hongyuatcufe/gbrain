@@ -37,6 +37,13 @@ export const EMBEDDING_PRICING: Record<string, EmbeddingPricing> = {
   'voyage:voyage-4-large':         { pricePerMTok: 0.18 },
   // ZeroEntropy (https://zeroentropy.dev/pricing — zembed-1)
   'zeroentropyai:zembed-1':        { pricePerMTok: 0.05 },
+  // hongyuatcufe fork — DashScope text-embedding-v3/v4 (Alibaba Cloud,
+  // https://help.aliyun.com/zh/model-studio/getting-started/, verified 2026-06).
+  // Pricing is ¥0.0005/1k tokens ≈ $0.07/1M tokens at the China-region rate.
+  'dashscope:text-embedding-v4':   { pricePerMTok: 0.07 },
+  'dashscope:text-embedding-v3':   { pricePerMTok: 0.07 },
+  'dashscope:text-embedding-v2':   { pricePerMTok: 0.07 },
+  'dashscope:text-embedding-v1':   { pricePerMTok: 0.07 },
 };
 
 export type PriceLookupResult =

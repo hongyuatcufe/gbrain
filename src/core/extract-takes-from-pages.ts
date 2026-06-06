@@ -15,7 +15,7 @@
 
 import type { BrainEngine } from './engine.ts';
 import type { TakeBatchInput, TakeKind } from './engine.ts';
-import { chat, isAvailable } from './ai/gateway.ts';
+import { chat, isAvailable, getChatModel } from './ai/gateway.ts';
 
 export const ALLOWED_PAGE_TYPES = [
   'concept', 'atom', 'lore', 'briefing', 'writing', 'originals',
@@ -173,8 +173,21 @@ export async function extractTakesFromPages(
 
     let response: { text: string };
     try {
+      // hongyuatcufe fork: fall back to the gateway's configured chat_model
+      // (e.g. deepseek:deepseek-v4-flash) instead of hard-coding Anthropic
+      // Haiku. Without this, capture/dream's takes extraction path silently
+      // skipped every page on installs without ANTHROPIC_API_KEY — the catch
+      // below swallowed the missing-key throw, so the takes table looked
+      // intentionally empty rather than broken. opts.model still wins when
+      // an explicit override is passed.
+      let chatModelFallback: string;
+      try {
+        chatModelFallback = getChatModel();
+      } catch {
+        chatModelFallback = 'anthropic:claude-haiku-4-5';
+      }
       response = await chat({
-        model: opts.model ?? 'anthropic:claude-haiku-4-5',
+        model: opts.model ?? chatModelFallback,
         system: CLASSIFIER_SYSTEM,
         messages: [
           {

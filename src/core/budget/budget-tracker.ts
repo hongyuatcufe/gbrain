@@ -32,6 +32,7 @@ import { mkdirSync, appendFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { gbrainPath } from '../config.ts';
 import { ANTHROPIC_PRICING, type ModelPricing } from '../anthropic-pricing.ts';
+import { canonicalLookup } from '../model-pricing.ts';
 import { EMBEDDING_PRICING, lookupEmbeddingPrice } from '../embedding-pricing.ts';
 import { splitProviderModelId } from '../model-id.ts';
 import { isoWeekFilename, resolveAuditDir } from '../audit-week-file.ts';
@@ -182,11 +183,16 @@ function lookupPricing(modelId: string, kind: BudgetKind): ModelPricing | null {
     }
     return null;
   }
-  // chat or rerank: try bare key first, then provider:model or provider/model.
-  // v0.41.21.0: route through splitProviderModelId so slash-prefixed ids
-  // (the form `--judge-model` and OpenRouter recipes emit) hit the pricing
-  // table. Pre-fix, slash-form silently no_pricing-failed `--max-cost` on
-  // brainstorm/lsd.
+  // hongyuatcufe fork: route chat-pricing lookup through canonicalLookup
+  // (model-pricing.ts) instead of the anthropic-only view, so non-Anthropic
+  // chat models (deepseek:deepseek-v4-*, openai:gpt-*, together:Llama-*) are
+  // recognized. Pre-fork, `lookupPricing(kind='chat')` only saw entries with
+  // the `anthropic:` prefix, so DeepSeek-as-chat_model tripped the no_pricing
+  // hard-fail under `--max-cost` in brainstorm. The legacy ANTHROPIC_PRICING
+  // path is preserved as a final bare-keyed fallback for callers passing the
+  // dateless Claude id without provider prefix.
+  const canon = canonicalLookup(modelId);
+  if (canon) return canon;
   const bare = ANTHROPIC_PRICING[modelId];
   if (bare) return bare;
   const { provider: providerId, model: modelTail } = splitProviderModelId(modelId);

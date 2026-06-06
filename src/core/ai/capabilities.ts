@@ -77,7 +77,13 @@ export function getProviderCapabilities(modelString: string): ProviderCapabiliti
   if (!chat) {
     throw new AIConfigError(
       `Provider "${recipe.id}" does not offer a chat touchpoint.`,
-      `Known providers with chat: openai, anthropic, google, openrouter, litellm-proxy, deepseek, groq, together, azure-openai, dashscope, minimax, zhipu, ollama, llama-server. Pick one for models.tier.subagent.`,
+      // hongyuatcufe fork: removed `dashscope` from this hint — the
+      // dashscope recipe only declares an embedding touchpoint, so
+      // pointing a chat_model at it is always wrong. The pre-fork
+      // string sent users in circles (error → suggestion lists
+      // dashscope → user tries dashscope → same error). Re-add once
+      // dashscope.ts grows a Qwen chat touchpoint.
+      `Known providers with chat: openai, anthropic, google, openrouter, litellm-proxy, deepseek, groq, together, azure-openai, minimax, zhipu, ollama, llama-server. Pick one for models.tier.subagent.`,
     );
   }
 

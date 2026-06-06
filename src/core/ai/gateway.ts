@@ -448,14 +448,20 @@ export async function reconfigureGatewayWithEngine(engine: BrainEngine): Promise
   // Resolve expansion (utility tier) and chat (reasoning tier). Embedding is
   // intentionally NOT re-resolved here — switching embedding models invalidates
   // the vector index. Out of scope per v0.31.12 plan ("Embedding tier knob").
+  // hongyuatcufe fork: omit `tier` so resolveModel's step-7 TIER_DEFAULTS
+  // (hardcoded anthropic:claude-*) cannot steamroll the user's explicit
+  // file-plane `expansion_model` / `chat_model`. With tier omitted, the
+  // chain becomes: configKey (DB models.chat) → env GBRAIN_MODEL → caller
+  // fallback (= cfg.chat_model from ~/.gbrain/config.json). Users who
+  // *want* tier-canonical routing still get it by setting `models.default`
+  // or `models.tier.<t>` in DB config; users like us with DeepSeek as
+  // chat_model in config.json now have that respected.
   const newExpansion = await resolveModel(engine, {
     configKey: 'models.expansion',
-    tier: 'utility',
     fallback: cfg.expansion_model ?? DEFAULT_EXPANSION_MODEL,
   });
   const newChat = await resolveModel(engine, {
     configKey: 'models.chat',
-    tier: 'reasoning',
     fallback: cfg.chat_model ?? DEFAULT_CHAT_MODEL,
   });
 

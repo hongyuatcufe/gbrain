@@ -93,7 +93,7 @@ describe('probeChatModel (#1698 = validity + key, config-independent)', () => {
     // deepseek is a registered recipe; its key check is deferred to gateway.chat()
     // (the per-transcript-degrade contract — A9). probe should be ok here.
     await withEnv(noKeyEnv(), async () => {
-      expect(probeChatModel('deepseek:deepseek-chat').ok).toBe(true);
+      expect(probeChatModel('deepseek:deepseek-v4-flash').ok).toBe(true);
     });
   });
 

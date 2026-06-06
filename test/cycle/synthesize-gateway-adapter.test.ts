@@ -81,7 +81,7 @@ describe('makeJudgeClient — construction-time provider probe', () => {
     // #1698 C1: this MUST stay green — validateModelId (id-validity only) does NOT
     // reject a non-anthropic provider for a missing key (no isAvailable here).
     await withEnv({ DEEPSEEK_API_KEY: undefined }, async () => {
-      const judge = makeJudgeClient('deepseek:deepseek-chat');
+      const judge = makeJudgeClient('deepseek:deepseek-v4-flash');
       expect(judge).not.toBeNull();
       expect(typeof judge?.create).toBe('function');
     });

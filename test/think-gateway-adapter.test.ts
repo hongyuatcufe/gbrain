@@ -167,14 +167,14 @@ describe('think gateway adapter — #1698 slash form + explicit-model fork', () 
       { ANTHROPIC_API_KEY: undefined, DEEPSEEK_API_KEY: undefined, OPENAI_API_KEY: undefined },
       async () => {
         resetGateway();  // unconfigured → gateway.chat() throws AIConfigError at create()
-        // deepseek:deepseek-chat passes validateModelId (real recipe + chat touchpoint) — the
+        // deepseek:deepseek-v4-flash passes validateModelId (real recipe + chat touchpoint) — the
         // A9 non-anthropic model. probeChatModel returns ok (no anthropic key check) → builds.
         const client = await __thinkAdapter.tryBuildGatewayClient(
-          'deepseek:deepseek-chat', { explicitModel: true },
+          'deepseek:deepseek-v4-flash', { explicitModel: true },
         );
         expect(client).not.toBeNull();  // proves the early gate did NOT pre-reject non-anthropic
         const params: any = {
-          model: 'deepseek:deepseek-chat',
+          model: 'deepseek:deepseek-v4-flash',
           max_tokens: 16,
           system: 'sys',
           messages: [{ role: 'user', content: 'hi' }],

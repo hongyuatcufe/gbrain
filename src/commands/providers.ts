@@ -11,6 +11,7 @@ import { probeOllama, probeLMStudio } from '../core/ai/probes.ts';
 import { loadConfig } from '../core/config.ts';
 import { AIConfigError, AITransientError } from '../core/ai/errors.ts';
 import type { Recipe } from '../core/ai/types.ts';
+import { buildGatewayConfig } from '../core/ai/build-gateway-config.ts';
 
 const SCHEMA_VERSION = 1;
 
@@ -33,15 +34,7 @@ interface ProviderOption {
 
 function configureFromEnv(): void {
   const config = loadConfig();
-  configureGateway({
-    embedding_model: config?.embedding_model,
-    embedding_dimensions: config?.embedding_dimensions,
-    expansion_model: config?.expansion_model,
-    chat_model: config?.chat_model,
-    chat_fallback_chain: config?.chat_fallback_chain,
-    base_urls: config?.provider_base_urls,
-    env: { ...process.env },
-  });
+  configureGateway(buildGatewayConfig(config ?? {} as any));
 }
 
 export function envReady(recipe: Recipe, env: NodeJS.ProcessEnv = process.env): boolean {
@@ -129,7 +122,7 @@ EXAMPLES
   gbrain providers list
   gbrain providers test --model openai:text-embedding-3-large
   gbrain providers test --touchpoint chat --model anthropic:claude-haiku-4-5
-  gbrain providers test --touchpoint chat --model deepseek:deepseek-chat
+  gbrain providers test --touchpoint chat --model deepseek:deepseek-v4-flash
   gbrain providers env ollama
   gbrain providers explain --json
 `);
@@ -163,8 +156,10 @@ async function runTest(args: string[]): Promise<void> {
     // the divergence at the top of the test so the recovery experience
     // doesn't repeat the bug-reporter's "providers test ✓ but import still
     // broken" trap.
+    let baseGatewayConfig = buildGatewayConfig({} as any);
     try {
       const cfg = loadConfig();
+      baseGatewayConfig = buildGatewayConfig(cfg ?? {} as any);
       const configuredModel = tpArg === 'embedding' ? cfg?.embedding_model : cfg?.chat_model;
       if (!configuredModel) {
         console.error(
@@ -183,14 +178,14 @@ async function runTest(args: string[]): Promise<void> {
     if (tpArg === 'embedding') {
       const dims = recipe?.touchpoints.embedding?.default_dims ?? 1536;
       configureGateway({
+        ...baseGatewayConfig,
         embedding_model: modelArg,
         embedding_dimensions: dims,
-        env: { ...process.env },
       });
     } else {
       configureGateway({
+        ...baseGatewayConfig,
         chat_model: modelArg,
-        env: { ...process.env },
       });
     }
     void modelId; // intentionally unused but preserved for readability
@@ -211,10 +206,16 @@ async function runTest(args: string[]): Promise<void> {
     } else {
       const result = await gwChat({
         messages: [{ role: 'user', content: 'Reply with just the word: pong' }],
-        maxTokens: 16,
+        maxTokens: 64,
       });
       const ms = Date.now() - start;
-      const preview = (result.text || '<empty>').replace(/\s+/g, ' ').slice(0, 80);
+      const text = (result.text || '').trim();
+      if (!text) {
+        throw new AITransientError(
+          `Provider returned no text (model=${result.model}, stop=${result.stopReason}).`,
+        );
+      }
+      const preview = text.replace(/\s+/g, ' ').slice(0, 80);
       console.log(`  ✓ ${ms}ms · model=${result.model} · stop=${result.stopReason} · in=${result.usage.input_tokens}/out=${result.usage.output_tokens} · "${preview}"`);
     }
     console.log('\nAll probes green.');

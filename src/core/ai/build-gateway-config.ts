@@ -10,7 +10,7 @@
  *
  * The single ownership site for: (a) folding file-plane API keys
  * (openai/anthropic/deepseek/dashscope/zeroentropy) into the gateway env, and (b) threading
- * local-server `*_BASE_URL` env vars into base_urls. Both matter for the
+ * provider `*_BASE_URL` env vars into base_urls. Both matter for the
  * init-time embedding-key probe — without (a) it would false-warn on
  * config.json-keyed users, and without (b) a live probe could hit the wrong
  * endpoint (custom OpenAI base URL, llama-server, etc.).
@@ -37,7 +37,7 @@ export function buildGatewayConfig(c: GBrainConfig): AIGatewayConfig {
   // setting it via `~/.gbrain/config.json` propagates into the gateway.
   if (c.zeroentropy_api_key) envFromConfig.ZEROENTROPY_API_KEY = c.zeroentropy_api_key;
 
-  // v0.32 codex finding #4+#5 fix: thread local-server _BASE_URL env vars
+  // v0.32 codex finding #4+#5 fix: thread provider _BASE_URL env vars
   // into base_urls so the gateway hits the user's configured port. Without
   // this, `LLAMA_SERVER_BASE_URL=http://localhost:9000` would let the probe
   // succeed against :9000 but the actual embed call would still go to the
@@ -54,6 +54,8 @@ export function buildGatewayConfig(c: GBrainConfig): AIGatewayConfig {
   if (process.env.LMSTUDIO_BASE_URL) envBaseUrls['lmstudio'] = process.env.LMSTUDIO_BASE_URL;
   if (process.env.LITELLM_BASE_URL) envBaseUrls['litellm'] = process.env.LITELLM_BASE_URL;
   if (process.env.OPENROUTER_BASE_URL) envBaseUrls['openrouter'] = process.env.OPENROUTER_BASE_URL;
+  if (process.env.DEEPSEEK_BASE_URL) envBaseUrls['deepseek'] = process.env.DEEPSEEK_BASE_URL;
+  if (process.env.DASHSCOPE_BASE_URL) envBaseUrls['dashscope'] = process.env.DASHSCOPE_BASE_URL;
 
   return {
     embedding_model: c.embedding_model,

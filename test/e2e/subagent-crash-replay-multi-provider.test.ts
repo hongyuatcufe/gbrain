@@ -145,7 +145,7 @@ const PROVIDER_MATRIX: ProviderShape[] = [
   },
   {
     providerId: 'deepseek',
-    modelId: 'deepseek:deepseek-chat',
+    modelId: 'deepseek:deepseek-v4-flash',
     // Representative openai-compatible recipe with native chat + tools.
     // (LiteLLM proxy was the original 5th slot in the plan but its recipe
     // declares no chat touchpoint — it's embedding-only. Deepseek is the
@@ -155,7 +155,7 @@ const PROVIDER_MATRIX: ProviderShape[] = [
       blocks: [{ type: 'text', text: 'deepseek resumed: openai-compatible chat works' }] as ChatBlock[],
       stopReason: 'end',
       usage: { input_tokens: 40, output_tokens: 9, cache_read_tokens: 0, cache_creation_tokens: 0 },
-      model: 'deepseek:deepseek-chat',
+      model: 'deepseek:deepseek-v4-flash',
       providerId: 'deepseek',
     },
   },

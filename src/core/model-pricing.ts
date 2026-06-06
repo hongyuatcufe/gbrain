@@ -80,7 +80,12 @@ export const CANONICAL_PRICING: Record<string, ModelPricing> = {
 
   // ── Together / DeepSeek (cross-modal-eval panel) ───────────────────────
   'together:meta-llama/Llama-3.3-70B-Instruct-Turbo': { input: 0.88, output: 0.88 },
+  'deepseek:deepseek-v4-flash':           { input:  0.14, output:  0.28 },
+  'deepseek:deepseek-v4-pro':             { input:  0.435, output:  0.87 },
+  // Legacy compatibility aliases. DeepSeek docs mark these for deprecation on
+  // 2026-07-24; keep pricing so old configs do not lose budget accounting.
   'deepseek:deepseek-chat':               { input:  0.14, output:  0.28 },
+  'deepseek:deepseek-reasoner':           { input:  0.14, output:  0.28 },
 };
 
 /**

@@ -2312,10 +2312,8 @@ export interface ChatOpts {
   cacheSystem?: boolean;
   /**
    * Request structured JSON output from the model.
-   * - 'json_object': forces the model to return a valid JSON object.
-   *   Passed as response_format via providerOptions for openai-compatible
-   *   providers (DeepSeek, OpenAI, etc.). Ignored on providers that don't
-   *   support it (Anthropic).
+   * - 'json_object': forces the model to return valid JSON via providerOptions
+   *   for openai-compatible providers (DeepSeek, OpenAI, etc.).
    */
   responseFormat?: { type: 'json_object' | 'text' };
 }

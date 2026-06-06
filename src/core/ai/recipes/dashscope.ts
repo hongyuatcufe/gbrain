@@ -17,7 +17,7 @@ export const dashscope: Recipe = {
   name: 'Alibaba DashScope (灵积)',
   tier: 'openai-compat',
   implementation: 'openai-compatible',
-  base_url_default: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+  base_url_default: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   auth_env: {
     required: ['DASHSCOPE_API_KEY'],
     setup_url: 'https://help.aliyun.com/zh/model-studio/getting-started/',

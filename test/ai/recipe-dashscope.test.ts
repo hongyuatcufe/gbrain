@@ -15,7 +15,7 @@ describe('recipe: dashscope', () => {
     expect(r!.tier).toBe('openai-compat');
     expect(r!.implementation).toBe('openai-compatible');
     expect(r!.base_url_default).toBe(
-      'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+      'https://dashscope.aliyuncs.com/compatible-mode/v1',
     );
     expect(r!.auth_env?.required).toEqual(['DASHSCOPE_API_KEY']);
   });

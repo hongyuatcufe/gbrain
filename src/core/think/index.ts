@@ -29,7 +29,7 @@ import { AIConfigError } from '../ai/errors.ts';
 import { normalizeModelId } from '../model-id.ts';
 import { hasAnthropicKey } from '../ai/anthropic-key.ts';
 
-/** Stub interface for tests — provider-neutral shape. */
+/** Anthropic Messages client interface — same shape used by subagent.ts so test stubs can be shared. */
 export interface ThinkLLMClient {
   create(params: Anthropic.MessageCreateParamsNonStreaming, opts?: { signal?: AbortSignal }): Promise<{ content: { type: string; text?: string }[] }>;
 }
@@ -439,7 +439,7 @@ export async function runThink(
     // Closes #952 (think over MCP returns "no LLM available").
     const client = opts.client ?? await tryBuildGatewayClient(modelUsed, { explicitModel: opts.modelExplicit });
     if (!client) {
-      warnings.push('NO_ANTHROPIC_API_KEY');
+      warnings.push('NO_CHAT_MODEL');
       // Degrade gracefully: return the gather without synthesis. Better than throwing.
       return {
         question: opts.question,
